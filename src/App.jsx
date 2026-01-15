@@ -1,125 +1,131 @@
 import React, { useState, useEffect } from 'react';
-import { Dumbbell, Plus, Calendar, TrendingUp, User, Settings, LogOut } from 'lucide-react';
+import { Dumbbell, Plus, Calendar, TrendingUp, User, Settings, LogOut, Edit3, Trash2 } from 'lucide-react';
 
-// Simulated API (replace with real backend)
-const API = {
-  async login(email, password) {
-    // Simulate API call
-    return { user: { id: 1, email, name: 'John Doe' }, apiKey: 'sk_test_' + Math.random().toString(36).substr(2, 9) };
-  },
-  async getWorkouts(apiKey) {
-    // Simulate fetching workouts
-    return [
-      { id: 1, date: '2026-01-15', type: 'Chest', exercises: [
+function App() {
+  const STORAGE_KEY = 'repai_workouts_v1';
+
+  const sampleWorkouts = [
+    { id: 1, date: '2026-01-15', type: 'Chest Day', exercises: [
         { name: 'Bench Press', sets: 3, reps: 10, weight: 20, unit: 'kg' },
         { name: 'Cable Flys', sets: 3, reps: 12, weight: 100, unit: 'lbs' }
-      ]},
-      { id: 2, date: '2026-01-13', type: 'Legs', exercises: [
+      ]
+    },
+    { id: 2, date: '2026-01-13', type: 'Legs Day', exercises: [
         { name: 'Squats', sets: 4, reps: 8, weight: 30, unit: 'kg' }
-      ]}
-    ];
-  },
-  async addWorkout(apiKey, workout) {
-    // Simulate adding workout
-    return { id: Date.now(), ...workout };
-  },
-  async getStats(apiKey) {
-    return {
-      totalWorkouts: 15,
-      thisWeek: 3,
-      totalVolume: 12500,
-      streak: 5
-    };
-  }
-};
+      ]
+    }
+  ];
 
-function FitnessApp() {
-  const [user, setUser] = useState(null);
-  const [apiKey, setApiKey] = useState(null);
   const [workouts, setWorkouts] = useState([]);
   const [stats, setStats] = useState(null);
-  const [showApiKey, setShowApiKey] = useState(false);
   const [activeTab, setActiveTab] = useState('workouts');
 
-  // Login form state
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  // Modal/form state
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [formTitle, setFormTitle] = useState('');
+  const [formDate, setFormDate] = useState(() => new Date().toISOString().slice(0,10));
+  const [formExercises, setFormExercises] = useState([{ name: '', sets: 3, reps: 8, weight: '', unit: 'kg' }]);
 
   useEffect(() => {
-    if (apiKey) {
-      loadData();
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      try {
+        setWorkouts(JSON.parse(raw));
+      } catch (e) {
+        setWorkouts(sampleWorkouts);
+      }
+    } else {
+      setWorkouts(sampleWorkouts);
     }
-  }, [apiKey]);
+  }, []);
 
-  const loadData = async () => {
-    const [workoutsData, statsData] = await Promise.all([
-      API.getWorkouts(apiKey),
-      API.getStats(apiKey)
-    ]);
-    setWorkouts(workoutsData);
-    setStats(statsData);
+  useEffect(() => {
+    // basic stats calculation
+    const total = workouts.length;
+    const thisWeek = workouts.filter(w => {
+      const wDate = new Date(w.date);
+      const now = new Date();
+      const weekAgo = new Date();
+      weekAgo.setDate(now.getDate() - 7);
+      return wDate >= weekAgo && wDate <= now;
+    }).length;
+    const totalVolume = workouts.reduce((sum, w) => {
+      return sum + (w.exercises || []).reduce((s, e) => s + ((e.weight||0) * (e.sets||0) * (e.reps||0)), 0);
+    }, 0);
+    setStats({ totalWorkouts: total, thisWeek, totalVolume, streak: 5 });
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(workouts));
+    } catch (e) {
+      console.warn('Failed to save workouts', e);
+    }
+  }, [workouts]);
+
+  const openAddModal = () => {
+    setEditingId(null);
+    setFormTitle('');
+    setFormDate(new Date().toISOString().slice(0,10));
+    setFormExercises([{ name: '', sets: 3, reps: 8, weight: '', unit: 'kg' }]);
+    setShowModal(true);
   };
 
-  const handleLogin = async (e) => {
+  const openEditModal = (workout) => {
+    setEditingId(workout.id);
+    setFormTitle(workout.type || '');
+    setFormDate(workout.date ? workout.date.slice(0,10) : new Date().toISOString().slice(0,10));
+    setFormExercises((workout.exercises || []).map(e => ({ ...e })));
+    if ((workout.exercises || []).length === 0) setFormExercises([{ name: '', sets: 3, reps: 8, weight: '', unit: 'kg' }]);
+    setShowModal(true);
+  };
+
+  const handleAddExercise = () => {
+    setFormExercises(prev => ([...prev, { name: '', sets: 3, reps: 8, weight: '', unit: 'kg' }]));
+  };
+
+  const handleRemoveExercise = (idx) => {
+    setFormExercises(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleExerciseChange = (idx, field, value) => {
+    setFormExercises(prev => prev.map((ex, i) => i === idx ? { ...ex, [field]: value } : ex));
+  };
+
+  const handleSave = (e) => {
     e.preventDefault();
-    const result = await API.login(email, password);
-    setUser(result.user);
-    setApiKey(result.apiKey);
+    const cleaned = formExercises.filter(ex => ex.name && ex.name.trim().length > 0).map(ex => ({
+      name: ex.name.trim(),
+      sets: Number(ex.sets) || 0,
+      reps: Number(ex.reps) || 0,
+      weight: ex.weight === '' ? null : Number(ex.weight),
+      unit: ex.unit || null,
+      notes: ex.notes || ''
+    }));
+
+    if (cleaned.length === 0) {
+      alert('Add at least one exercise with a name.');
+      return;
+    }
+
+    if (editingId) {
+      setWorkouts(prev => prev.map(w => w.id === editingId ? ({ ...w, type: formTitle, date: formDate, exercises: cleaned }) : w));
+    } else {
+      const newWorkout = {
+        id: Date.now(),
+        type: formTitle || 'Workout',
+        date: formDate,
+        exercises: cleaned
+      };
+      setWorkouts(prev => [newWorkout, ...prev]);
+    }
+
+    setShowModal(false);
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    setApiKey(null);
-    setWorkouts([]);
-    setStats(null);
+  const handleDelete = (id) => {
+    if (!confirm('Delete this workout?')) return;
+    setWorkouts(prev => prev.filter(w => w.id !== id));
   };
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
-          <div className="flex items-center justify-center mb-6">
-            <Dumbbell className="w-12 h-12 text-indigo-600" />
-          </div>
-          <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">FitTrack</h1>
-          <p className="text-center text-gray-600 mb-8">Track your fitness journey with AI</p>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                placeholder="you@example.com"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                placeholder="••••••••"
-              />
-            </div>
-            <button
-              onClick={handleLogin}
-              className="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
-            >
-              Sign In
-            </button>
-          </div>
-          
-          <p className="text-center text-sm text-gray-500 mt-4">
-            Demo: Use any email/password
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -131,15 +137,8 @@ function FitnessApp() {
             <h1 className="text-2xl font-bold text-gray-800">FitTrack</h1>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <User className="w-4 h-4" />
-              <span>{user.name}</span>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800"
-            >
-              <LogOut className="w-4 h-4" />
+            <button onClick={openAddModal} className="inline-flex items-center gap-2 bg-indigo-600 text-white px-3 py-2 rounded hover:bg-indigo-700">
+              <Plus className="w-4 h-4" /> Add Workout
             </button>
           </div>
         </div>
@@ -205,12 +204,20 @@ function FitnessApp() {
                   <div className="flex items-center gap-3">
                     <Calendar className="w-5 h-5 text-gray-400" />
                     <div>
-                      <h3 className="font-semibold text-gray-800">{workout.type} Day</h3>
+                      <h3 className="font-semibold text-gray-800">{workout.type}</h3>
                       <p className="text-sm text-gray-500">{workout.date}</p>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => openEditModal(workout)} className="text-gray-500 hover:text-gray-800">
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleDelete(workout.id)} className="text-red-500 hover:text-red-700">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                
+
                 <div className="space-y-3">
                   {workout.exercises.map((exercise, idx) => (
                     <div key={idx} className="flex items-center justify-between py-2 border-t border-gray-100">
@@ -222,7 +229,7 @@ function FitnessApp() {
                       </div>
                       <div className="text-right">
                         <div className="font-semibold text-gray-800">
-                          {exercise.weight} {exercise.unit}
+                          {exercise.weight !== null && exercise.weight !== undefined ? `${exercise.weight} ${exercise.unit || ''}` : ''}
                         </div>
                       </div>
                     </div>
@@ -230,11 +237,11 @@ function FitnessApp() {
                 </div>
               </div>
             ))}
-            
+
             {workouts.length === 0 && (
               <div className="text-center py-12 text-gray-500">
                 <Dumbbell className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No workouts yet. Connect Claude Desktop to start logging!</p>
+                <p>No workouts yet. Click "Add Workout" to create one.</p>
               </div>
             )}
           </div>
@@ -242,53 +249,70 @@ function FitnessApp() {
 
         {activeTab === 'settings' && (
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">API Configuration</h2>
-            <p className="text-gray-600 mb-4">
-              Use this API key to connect Claude Desktop to your FitTrack account.
-            </p>
-            
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Your API Key
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type={showApiKey ? 'text' : 'password'}
-                  value={apiKey}
-                  readOnly
-                  className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded font-mono text-sm"
-                />
-                <button
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-                >
-                  {showApiKey ? 'Hide' : 'Show'}
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <h3 className="font-semibold text-blue-900 mb-2">Setup Instructions</h3>
-              <ol className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
-                <li>Install the FitTrack MCP server (see documentation below)</li>
-                <li>Add your API key to the MCP server configuration</li>
-                <li>Restart Claude Desktop</li>
-                <li>Start logging workouts with natural language!</li>
-              </ol>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="font-semibold text-gray-800 mb-2">Example Usage</h3>
-              <div className="text-sm text-gray-600 space-y-1">
-                <p className="italic">"Hey Claude! Just finished a chest day. Did 2 sets of bench press with 20 kgs, 2 × cable flys machine @ 100lbs"</p>
-                <p className="text-gray-500 mt-2">Claude will automatically log this workout to your FitTrack account.</p>
-              </div>
-            </div>
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Settings</h2>
+            <p className="text-gray-600">Local-only MVP: workouts are stored in your browser's localStorage.</p>
           </div>
         )}
       </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-2xl p-6 shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">{editingId ? 'Edit Workout' : 'Add Workout'}</h3>
+              <button onClick={() => setShowModal(false)} className="text-gray-500">Close</button>
+            </div>
+
+            <form onSubmit={handleSave} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                <input value={formTitle} onChange={(e) => setFormTitle(e.target.value)} className="w-full px-4 py-2 border rounded" placeholder="Chest Day, Leg Day, etc." />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className="px-3 py-2 border rounded" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Exercises</label>
+                <div className="space-y-2">
+                  {formExercises.map((ex, idx) => (
+                    <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+                      <input value={ex.name} onChange={(e) => handleExerciseChange(idx, 'name', e.target.value)} placeholder="Exercise name" className="col-span-5 px-3 py-2 border rounded" />
+                      <input value={ex.sets} onChange={(e) => handleExerciseChange(idx, 'sets', e.target.value)} type="number" min="0" className="col-span-2 px-3 py-2 border rounded" />
+                      <input value={ex.reps} onChange={(e) => handleExerciseChange(idx, 'reps', e.target.value)} type="number" min="0" className="col-span-2 px-3 py-2 border rounded" />
+                      <input value={ex.weight || ''} onChange={(e) => handleExerciseChange(idx, 'weight', e.target.value)} type="number" step="0.1" className="col-span-2 px-3 py-2 border rounded" placeholder="weight" />
+                      <select value={ex.unit || 'kg'} onChange={(e) => handleExerciseChange(idx, 'unit', e.target.value)} className="col-span-1 px-2 py-2 border rounded">
+                        <option>kg</option>
+                        <option>lbs</option>
+                        <option></option>
+                      </select>
+                      <div className="col-span-12 flex justify-end">
+                        <button type="button" onClick={() => handleRemoveExercise(idx)} className="text-red-500">Remove</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-3">
+                  <button type="button" onClick={handleAddExercise} className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 rounded">
+                    <Plus className="w-4 h-4" /> Add Exercise
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded border">Cancel</button>
+                <button type="submit" className="px-4 py-2 rounded bg-indigo-600 text-white">Save Workout</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-export default FitnessApp;
+export default App;
