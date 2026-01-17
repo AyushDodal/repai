@@ -71,16 +71,7 @@ function App() {
       return sum + (w.exercises || []).reduce((s, e) => s + ((e.weight||0) * (e.sets||0) * (e.reps||0)), 0);
     }, 0);
     setStats({ totalWorkouts: total, thisWeek, totalVolume, streak: 5 });
-
-
-
-    
-    /*try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(workouts));
-    } catch (e) {
-      console.warn('Failed to save workouts', e);
-    }
-  }, [workouts]);*/
+  }, [workouts]);
 
   const openAddModal = () => {
     setEditingId(null);
