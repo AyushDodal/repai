@@ -119,10 +119,40 @@ function App() {
     if (rows.length === 0) return alert("Add at least one exercise");
   
     await supabase.from("table1").insert(rows);
-  
+
     setShowModal(false);
-    window.location.reload(); // MVP-safe refresh
-  };
+    
+    // force re-fetch
+    const { data } = await supabase
+      .from("table1")
+      .select("*")
+      .order("date", { ascending: false });
+    
+    // regroup rows → workouts (same logic as useEffect)
+    const grouped = Object.values(
+      data.reduce((acc, row) => {
+        const key = `${row.date}-${row.device_id || "default"}`;
+        if (!acc[key]) {
+          acc[key] = {
+            id: key,
+            date: row.date,
+            type: "Workout",
+            exercises: []
+          };
+        }
+        acc[key].exercises.push({
+          name: row.exercise,
+          sets: row.sets,
+          reps: row.reps,
+          weight: row.weight,
+          unit: "kg"
+        });
+        return acc;
+      }, {})
+    );
+    
+    setWorkouts(grouped);
+
 
 
   const handleDelete = (id) => {
