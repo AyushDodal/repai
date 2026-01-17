@@ -1,3 +1,7 @@
+console.log("AUTH HEADER:", req.headers.get("authorization"));
+console.log("EXPECTED:", `Bearer ${INCOMING_KEY}`);
+
+
 // POST: accepts { device_id, parsed, raw_text? }
 // Headers: Authorization: Bearer <INCOMING_KEY>
 export default async (req: Request) => {
