@@ -1,5 +1,4 @@
-console.log("AUTH HEADER:", req.headers.get("authorization"));
-console.log("EXPECTED:", `Bearer ${INCOMING_KEY}`);
+
 
 
 // POST: accepts { device_id, parsed, raw_text? }
@@ -8,6 +7,8 @@ export default async (req: Request) => {
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
   const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE')!;
   const INCOMING_KEY = Deno.env.get('INCOMING_KEY')!;
+  console.log("AUTH HEADER:", req.headers.get("authorization"));
+  console.log("EXPECTED:", `Bearer ${INCOMING_KEY}`);
 
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
   if (req.headers.get('authorization') !== `Bearer ${INCOMING_KEY}`) return new Response('Unauthorized', { status: 401 });
