@@ -1,21 +1,10 @@
+import { supabase } from "./supabase";
+
 import React, { useState, useEffect } from 'react';
 import { Dumbbell, Plus, Calendar, TrendingUp, User, Settings, LogOut, Edit3, Trash2 } from 'lucide-react';
 
 function App() {
-  const STORAGE_KEY = 'repai_workouts_v1';
-
-  const sampleWorkouts = [
-    { id: 1, date: '2026-01-15', type: 'Chest Day', exercises: [
-        { name: 'Bench Press', sets: 3, reps: 10, weight: 20, unit: 'kg' },
-        { name: 'Cable Flys', sets: 3, reps: 12, weight: 100, unit: 'lbs' }
-      ]
-    },
-    { id: 2, date: '2026-01-13', type: 'Legs Day', exercises: [
-        { name: 'Squats', sets: 4, reps: 8, weight: 30, unit: 'kg' }
-      ]
-    }
-  ];
-
+  
   const [workouts, setWorkouts] = useState([]);
   const [stats, setStats] = useState(null);
   const [activeTab, setActiveTab] = useState('workouts');
@@ -27,19 +16,47 @@ function App() {
   const [formDate, setFormDate] = useState(() => new Date().toISOString().slice(0,10));
   const [formExercises, setFormExercises] = useState([{ name: '', sets: 3, reps: 8, weight: '', unit: 'kg' }]);
 
+
+
+
+
   useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      try {
-        setWorkouts(JSON.parse(raw));
-      } catch (e) {
-        setWorkouts(sampleWorkouts);
-      }
-    } else {
-      setWorkouts(sampleWorkouts);
-    }
+    const load = async () => {
+      const { data } = await supabase
+        .from("table1")
+        .select("*")
+        .order("date", { ascending: false });
+  
+      // group rows → workouts
+      const grouped = Object.values(
+        data.reduce((acc, row) => {
+          const key = `${row.date}-${row.device_id || "default"}`;
+          if (!acc[key]) {
+            acc[key] = {
+              id: key,
+              date: row.date,
+              type: "Workout",
+              exercises: []
+            };
+          }
+          acc[key].exercises.push({
+            name: row.exercise,
+            sets: row.sets,
+            reps: row.reps,
+            weight: row.weight,
+            unit: "kg"
+          });
+          return acc;
+        }, {})
+      );
+  
+      setWorkouts(grouped);
+    };
+  
+    load();
   }, []);
 
+  
   useEffect(() => {
     // basic stats calculation
     const total = workouts.length;
@@ -55,12 +72,15 @@ function App() {
     }, 0);
     setStats({ totalWorkouts: total, thisWeek, totalVolume, streak: 5 });
 
-    try {
+
+
+    
+    /*try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(workouts));
     } catch (e) {
       console.warn('Failed to save workouts', e);
     }
-  }, [workouts]);
+  }, [workouts]);*/
 
   const openAddModal = () => {
     setEditingId(null);
@@ -91,36 +111,28 @@ function App() {
     setFormExercises(prev => prev.map((ex, i) => i === idx ? { ...ex, [field]: value } : ex));
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    const cleaned = formExercises.filter(ex => ex.name && ex.name.trim().length > 0).map(ex => ({
-      name: ex.name.trim(),
-      sets: Number(ex.sets) || 0,
-      reps: Number(ex.reps) || 0,
-      weight: ex.weight === '' ? null : Number(ex.weight),
-      unit: ex.unit || null,
-      notes: ex.notes || ''
-    }));
-
-    if (cleaned.length === 0) {
-      alert('Add at least one exercise with a name.');
-      return;
-    }
-
-    if (editingId) {
-      setWorkouts(prev => prev.map(w => w.id === editingId ? ({ ...w, type: formTitle, date: formDate, exercises: cleaned }) : w));
-    } else {
-      const newWorkout = {
-        id: Date.now(),
-        type: formTitle || 'Workout',
+  
+    const rows = formExercises
+      .filter(e => e.name)
+      .map(e => ({
         date: formDate,
-        exercises: cleaned
-      };
-      setWorkouts(prev => [newWorkout, ...prev]);
-    }
-
+        exercise: e.name,
+        sets: Number(e.sets),
+        reps: Number(e.reps),
+        weight: e.weight ? Number(e.weight) : null,
+        raw_text: JSON.stringify(e)
+      }));
+  
+    if (rows.length === 0) return alert("Add at least one exercise");
+  
+    await supabase.from("table1").insert(rows);
+  
     setShowModal(false);
+    window.location.reload(); // MVP-safe refresh
   };
+
 
   const handleDelete = (id) => {
     if (!confirm('Delete this workout?')) return;
@@ -209,10 +221,10 @@ function App() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => openEditModal(workout)} className="text-gray-500 hover:text-gray-800">
+                    <button onClick={() => alert("Edit coming soon")} className="text-gray-500 hover:text-gray-800">
                       <Edit3 className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDelete(workout.id)} className="text-red-500 hover:text-red-700">
+                    <button onClick={() => alert("Delete coming soon")} className="text-red-500 hover:text-red-700">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
