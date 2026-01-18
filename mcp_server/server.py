@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from mcp.server.fastapi import MCPFastAPI
+#from mcp.server.fastapi import MCPFastAPI
 import requests
 import os
 
