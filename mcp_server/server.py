@@ -1,17 +1,14 @@
 from fastapi import FastAPI
-#from mcp.server.fastapi import MCPFastAPI
 import requests
 import os
+
+app = FastAPI()
 
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_ANON_KEY = os.environ["SUPABASE_ANON_KEY"]
 
-app = FastAPI()
-mcp = MCPFastAPI(app)
-
-@mcp.tool()
+@app.post("/create_workout")
 def create_workout(device_id: str, parsed: dict):
-    """Create a workout in FitTrack"""
     resp = requests.post(
         f"{SUPABASE_URL}/rest/v1/table1",
         headers={
@@ -28,9 +25,8 @@ def create_workout(device_id: str, parsed: dict):
     )
     return resp.json()
 
-@mcp.tool()
+@app.get("/list_workouts")
 def list_workouts():
-    """List workouts"""
     resp = requests.get(
         f"{SUPABASE_URL}/rest/v1/table1",
         headers={
