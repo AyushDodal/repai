@@ -1,12 +1,12 @@
 # mcp_server/server.py
 
-from fastapi import FastAPI
+#from fastapi import FastAPI
 from mcp.server.fastmcp import FastMCP
 import requests
 import os
 
-app = FastAPI()
-mcp = FastMCP(app)
+#app = FastAPI()
+mcp = FastMCP("FitTrack-MCP", host="0.0.0.0", port=8000)
 
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_ANON_KEY = os.environ["SUPABASE_ANON_KEY"]
@@ -32,7 +32,7 @@ def create_workout(device_id: str, parsed: dict):
 
 @mcp.tool()
 def list_workouts():
-    """List workouts"""
+    """Get a List of workouts"""
     resp = requests.get(
         f"{SUPABASE_URL}/rest/v1/table1",
         headers={
@@ -41,3 +41,7 @@ def list_workouts():
         },
     )
     return resp.json()
+
+
+if __name__ == "__main__":
+    mcp.run(transport="streamable-http")
