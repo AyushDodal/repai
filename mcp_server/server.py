@@ -1,12 +1,12 @@
 # mcp_server/server.py
 
 from fastapi import FastAPI
-from mcp.server.fastapi import MCPFastAPI
+from mcp.server.fastmcp import FastMCP
 import requests
 import os
 
 app = FastAPI()
-mcp = MCPFastAPI(app)
+mcp = FastMCP(app)
 
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_ANON_KEY = os.environ["SUPABASE_ANON_KEY"]
