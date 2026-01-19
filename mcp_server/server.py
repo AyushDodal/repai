@@ -19,7 +19,7 @@ def create_workout(device_id: str, parsed: dict):
         headers={
             "apikey": SUPABASE_ANON_KEY,
             "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
-            "Content-Type": "application/json",
+            "Content-Type": "text/html",
         },
         json={
             "device_id": device_id,
