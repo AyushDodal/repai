@@ -1,12 +1,12 @@
 # mcp_server/server.py
 
-#from fastapi import FastAPI
+from fastapi import FastAPI
 from mcp.server.fastmcp import FastMCP
 import requests
 import os
 
-#app = FastAPI()
-mcp = FastMCP("FitTrack-MCP", host="0.0.0.0", port=8000)
+app = FastAPI()
+mcp = FastMCP(app)
 
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_ANON_KEY = os.environ["SUPABASE_ANON_KEY"]
@@ -42,6 +42,3 @@ def list_workouts():
     )
     return resp.json()
 
-
-if __name__ == "__main__":
-    mcp.run(transport="streamable-http")
