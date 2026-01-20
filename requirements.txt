@@ -2,3 +2,5 @@ fastmcp
 uvicorn
 requests
 mcp
+asyncio
+nest_asyncio
