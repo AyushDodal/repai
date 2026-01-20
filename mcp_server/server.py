@@ -1,17 +1,20 @@
 # mcp_server/server.py
 
-from fastapi import FastAPI
-from mcp.server.fastmcp import FastMCP
+import sys
+import asyncio
 import requests
 import os
+from fastmcp import FastMCP
+import nest_asyncio
+nest_asyncio.apply()
 
-app = FastAPI()
-mcp = FastMCP(app)
 
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_ANON_KEY = os.environ["SUPABASE_ANON_KEY"]
 
-@mcp.tool()
+server = FastMCP("fittrack-mcp-remote")
+
+@server.tool()
 def create_workout(device_id: str, parsed: dict):
     """Create a workout in FitTrack"""
     resp = requests.post(
@@ -19,26 +22,39 @@ def create_workout(device_id: str, parsed: dict):
         headers={
             "apikey": SUPABASE_ANON_KEY,
             "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
-            "Content-Type": "text/html",
+            "Content-Type": "application/json"
         },
         json={
+
             "device_id": device_id,
             "date": parsed.get("date"),
             "exercise": parsed.get("type"),
-            "parsed": parsed,
-        },
+            "parsed": parsed
+        }
     )
     return resp.json()
 
-@mcp.tool()
+@server.tool()
 def list_workouts():
-    """Get a List of workouts"""
+    """List workouts"""
     resp = requests.get(
         f"{SUPABASE_URL}/rest/v1/table1",
         headers={
             "apikey": SUPABASE_ANON_KEY,
             "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
-        },
+        }
     )
     return resp.json()
 
+"""async def main():
+    await server.run(
+        read_stream=sys.stdin,
+        write_stream=sys.stdout,
+        initialization_options={}
+    )"""
+
+if __name__ == "__main__":
+    import nest_asyncio
+    nest_asyncio.apply()
+    #asyncio.run(main())
+    server.run(transport="streamable-http")
