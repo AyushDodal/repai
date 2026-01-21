@@ -50,20 +50,35 @@ def list_workouts():
         f"{SUPABASE_URL}/rest/v1/table1",
         headers={
             "apikey": SUPABASE_ANON_KEY,
-            "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
+            "Authorization": f"Bearer {SUPABASE_ANON_KEY}"
         }
     )
     return resp.json()
 
-"""async def main():
-    await server.run(
-        read_stream=sys.stdin,
-        write_stream=sys.stdout,
-        initialization_options={}
-    )"""
+
+@server.tool()
+def delete_workout(parsed: dict):
+    """
+    Delete a specific workout by workout id
+    """
+
+    workout_id = parsed.get("id")
+    
+    resp = requests.delete(
+        f"{SUPABASE_URL}/rest/v1/table1?id=eq.{workout_id}",
+        headers={
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
+            "Content-Type": "application/json"
+        }
+    )
+    return (
+        "status" : resp.status_code,
+        "text" : resp.text
+    )
+
 
 if __name__ == "__main__":
     import nest_asyncio
     nest_asyncio.apply()
-    #asyncio.run(main())
     server.run(transport="streamable-http")
