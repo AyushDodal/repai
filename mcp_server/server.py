@@ -36,7 +36,12 @@ def create_workout(device_id: str, parsed: dict):
             "parsed": parsed
         }
     )
-    return resp.json()
+    return {
+        "status": resp.status_code,
+        "text": resp.text
+        }
+
+
 
 @server.tool()
 def list_workouts():
