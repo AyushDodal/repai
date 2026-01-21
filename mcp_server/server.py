@@ -72,10 +72,10 @@ def delete_workout(parsed: dict):
             "Content-Type": "application/json"
         }
     )
-    return (
+    return {
         "status" : resp.status_code,
         "text" : resp.text
-    )
+    }
 
 
 if __name__ == "__main__":
