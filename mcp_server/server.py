@@ -28,11 +28,11 @@ def create_workout(device_id: str, date: date, exercise: str, sets: int, weight:
         json={
 
             "device_id": device_id,
-            "date": date,
-            "exercise": exercise, 
-            "sets": sets, 
-            "weight": weight, 
-            "reps": reps,
+            "date": parsed.date,
+            "exercise": parsed.name, 
+            "sets": parsed.sets, 
+            "weight": parsed.weight, 
+            "reps": parsed.reps,
             "parsed": parsed
         }
     )
