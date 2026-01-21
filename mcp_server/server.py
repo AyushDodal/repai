@@ -16,7 +16,7 @@ SUPABASE_ANON_KEY = os.environ["SUPABASE_ANON_KEY"]
 server = FastMCP("fittrack-mcp-remote")
 
 @server.tool()
-def create_workout(device_id: str, date: date, exercise: str, sets: int, weight: float, reps: float, parsed: dict):
+def create_workout(device_id: str, parsed: dict):
     """Create a workout in FitTrack"""
     resp = requests.post(
         f"{SUPABASE_URL}/rest/v1/table1",
