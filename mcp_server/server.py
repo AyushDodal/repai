@@ -63,7 +63,7 @@ def list_workouts():
 
 
 @server.tool()
-def delete_workout(workout_id: int):
+def delete_workout(workout_id: str):
     """Delete a workout by id"""
 
     resp = requests.delete(
